@@ -1,0 +1,25 @@
+# ninja log v5
+0	2757	6849474420057292	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+2771	4067	6849474433133248	window_enrich.exe	73f4c6a080478a3b
+3	3790	6849482073862486	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+3794	5309	6849482088984185	window_enrich.exe	73f4c6a080478a3b
+4	3573	6849482274187032	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+3574	5066	6849482289093599	window_enrich.exe	73f4c6a080478a3b
+5	3595	6849483037156533	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+3596	5035	6849483051548895	window_enrich.exe	73f4c6a080478a3b
+4	3691	6849483240518638	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+3693	5249	6849483256046442	window_enrich.exe	73f4c6a080478a3b
+3	3528	6849483961047598	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+3529	5045	6849483976189747	window_enrich.exe	73f4c6a080478a3b
+5	3532	6849485362395783	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+3533	5003	6849485377051031	window_enrich.exe	73f4c6a080478a3b
+3	2914	6849486846795569	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+2915	4216	6849486859805859	window_enrich.exe	73f4c6a080478a3b
+4	2837	6849488510498828	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+2838	4370	6849488525752748	window_enrich.exe	73f4c6a080478a3b
+5	3081	6849489791841140	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+3082	4339	6849489804394119	window_enrich.exe	73f4c6a080478a3b
+3	2836	6849492118711649	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+2837	4138	6849492131703093	window_enrich.exe	73f4c6a080478a3b
+4	2824	6849492360494868	CMakeFiles/window_enrich.dir/main.cpp.obj	1bd1eb5698a99c2b
+2825	4073	6849492372973050	window_enrich.exe	73f4c6a080478a3b
