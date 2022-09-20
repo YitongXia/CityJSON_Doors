@@ -3,6 +3,7 @@
 #include <string>
 #include "include/json.hpp"
 #include <cmath>
+using namespace std;
 
 using json = nlohmann::json;
 
@@ -80,8 +81,47 @@ void split_surface(json &j ){
     }
 }
 
+
+void select_single_building(string &filename, string &building_num)
+{
+    std::ifstream input("../data/"+filename);
+    json j;
+    input >> j;
+    input.close();
+
+    json output_json;
+    for(auto &co:j["CityObjects"].items()) {
+
+        if(co.key() == building_num)
+        {
+            // information of parents building
+            json new_j = co.value();
+            output_json["CityObjects"][building_num] = new_j;
+            cout<<output_json<<endl;
+
+
+            //read information of children
+
+
+            for(auto &g:co.value()["geometry"]) {
+                if(g["type"] == "Solid") {
+                    json surfaces_list = g["semantics"]["values"];
+                    for(auto &surface:surfaces_list){
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+
 int main(int argc, const char * argv[]) {
 
+    string filename = "cityjson.json";
+    string building_num = "NL.IMBAG.Pand.0503100000013040";
+
+    select_single_building(filename,building_num);
 
     std::ifstream input("../data/cityjson.json");
     json j;
