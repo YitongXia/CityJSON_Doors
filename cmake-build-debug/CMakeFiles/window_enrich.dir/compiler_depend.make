@@ -266,7 +266,8 @@ CMakeFiles/window_enrich.dir/main.cpp.o: /mnt/c/Users/pro/CityJSON_Doors/main.cp
   /usr/include/c++/9/bits/locale_conv.h \
   /usr/include/c++/9/bits/quoted_string.h \
   /usr/include/c++/9/sstream \
-  /usr/include/c++/9/bits/sstream.tcc
+  /usr/include/c++/9/bits/sstream.tcc \
+  /mnt/c/Users/pro/CityJSON_Doors/building_selection.cpp
 
 
 /usr/include/c++/9/bits/sstream.tcc:
@@ -466,6 +467,8 @@ CMakeFiles/window_enrich.dir/main.cpp.o: /mnt/c/Users/pro/CityJSON_Doors/main.cp
 /usr/include/x86_64-linux-gnu/bits/uintn-identity.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
+
+/mnt/c/Users/pro/CityJSON_Doors/building_selection.cpp:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
 
