@@ -49,11 +49,11 @@ void select_single_building(string &filename, string &building_num)
         }
     }
 
-    json vertices_list = j["vertices"];
     vector<int> old_ver_index;
     //vector<vector<int>> new_vertices;
     int i = 0;
 
+    // for multisurface condition
     for(auto & co:output_json["CityObjects"].items()) {
         for (auto& g : co.value()["geometry"]) {
             if(g["type"] == "MultiSurface") {
@@ -79,24 +79,15 @@ void select_single_building(string &filename, string &building_num)
                                 }
                             }
                             else if(old_ver_index.empty()) {
-                                cout<<shells<<endl;
                                 old_ver_index.emplace_back(shells[l]);
-
                                 shells[l] = i;
-                                //new_ver_index.emplace_back(l);
                                 i++;
                             }
                         }
                     }
                 }
             }
-        }
-    }
-
-
-    for(auto & co:output_json["CityObjects"].items()) {
-        for (auto& g : co.value()["geometry"]) {
-            if(g["type"] == "Solid") {
+            else if(g["type"] == "Solid") {
                 for(auto & boundaries: g["boundaries"]) {
                     for(auto &boundary: boundaries) {
                         for(auto &shells: boundary) {
@@ -138,7 +129,7 @@ void select_single_building(string &filename, string &building_num)
 
     json new_vertices;
     for(auto old_v:old_ver_index) {
-        new_vertices.emplace_back(vertices_list[old_v]);
+        new_vertices.emplace_back(j["vertices"][old_v]);
         //<<new_vertices<<endl;
         //new_vertices.emplace_back(vertices_list[old_v]);
     }
@@ -149,14 +140,26 @@ void select_single_building(string &filename, string &building_num)
     output_json["version"] = j["version"];
     output_json["vertices"] = new_vertices;
 
-
     ofstream o("../data/"+ building_num +".json");
     o << output_json.dump(2) << endl;
     o.close();
     cout<<"finished!"<<endl;
 }
 
-
+json lod_filter(json &j,float lod) {
+    
+    for (auto &co: j["CityObjects"].items()) {
+        json geometry_json;
+        for (auto &g: co.value()["geometry"]) {
+            if (g["type"] == "Solid") {
+                if (g["lod"] == lod)
+                    geometry_json.emplace_back(g);
+            }
+        }
+        co.value()["geometry"] = geometry_json;
+    }
+    return j;
+}
 // to select surfaces
 // in this case, the surface is
 static void read_surface_list(json &j, int surface_id)
@@ -262,7 +265,14 @@ int main(int argc, const char * argv[]) {
     string filename = "3dbag_v210908_fd2cee53_5910.json";
     string building_num = "NL.IMBAG.Pand.0503100000032914";
 
+    std::ifstream input("../data/"+filename);
+    json j;
+    input >> j;
+    input.close();
+    
+    lod_filter(j,2.2);
     select_single_building(filename,building_num);
-
+    
+    
     return 0;
 }
