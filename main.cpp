@@ -4,6 +4,7 @@
 #include "include/json.hpp"
 #include <cmath>
 
+
 using namespace std;
 using json = nlohmann::json;
 
@@ -12,9 +13,148 @@ public:
     double x;
     double y;
     double z;
+
     Point(double x1,double y1,double z1): x(x1),y(y1),z(z1)
     {}
 };
+
+void select_single_building(string &filename, string &building_num)
+{
+    std::ifstream input("../data/"+filename);
+    json j;
+    input >> j;
+    input.close();
+
+    json output_json;
+    json children_json;
+
+    for(auto &co:j["CityObjects"].items()) {
+        if(co.key() == building_num)
+        {
+            // information of parents building
+            output_json["CityObjects"][building_num] = co.value();
+            // cout<<output_json<<endl;
+            children_json = co.value()["children"];
+        }
+    }
+
+    for(auto &children:children_json){
+        for(auto &co:j["CityObjects"].items()) {
+            if(co.key() == children)
+            {
+                string name = children;
+                json new_j = co.value();
+                output_json["CityObjects"][name] = new_j;
+            }
+        }
+    }
+
+    json vertices_list = j["vertices"];
+    vector<int> old_ver_index;
+    //vector<vector<int>> new_vertices;
+    int i = 0;
+
+    for(auto & co:output_json["CityObjects"].items()) {
+        for (auto& g : co.value()["geometry"]) {
+            if(g["type"] == "MultiSurface") {
+                for(auto & boundaries: g["boundaries"]) {
+                    for(auto &shells: boundaries) {
+                        for(int l = 0; l<shells.size();l++) {
+
+                            if(!old_ver_index.empty()){
+                                bool exist = false;
+                                for(int k=0;k<old_ver_index.size();k++) {
+                                    if(shells[l] == old_ver_index[k]) {
+
+                                        shells[l] = k;
+                                        exist = true;
+                                        break;
+                                    }
+                                }
+                                if(!exist)
+                                {
+                                    old_ver_index.emplace_back(shells[l]);
+                                    shells[l]=i;
+                                    i++;
+                                }
+                            }
+                            else if(old_ver_index.empty()) {
+                                cout<<shells<<endl;
+                                old_ver_index.emplace_back(shells[l]);
+
+                                shells[l] = i;
+                                //new_ver_index.emplace_back(l);
+                                i++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    for(auto & co:output_json["CityObjects"].items()) {
+        for (auto& g : co.value()["geometry"]) {
+            if(g["type"] == "Solid") {
+                for(auto & boundaries: g["boundaries"]) {
+                    for(auto &boundary: boundaries) {
+                        for(auto &shells: boundary) {
+                            for(int l = 0; l<shells.size();l++) {
+
+                                if(!old_ver_index.empty()){
+                                    bool exist = false;
+                                    for(int k=0;k<old_ver_index.size();k++) {
+                                        if(shells[l] == old_ver_index[k]) {
+
+                                            shells[l] = k;
+                                            exist = true;
+                                            break;
+                                        }
+                                    }
+                                    if(!exist)
+                                    {
+                                        old_ver_index.emplace_back(shells[l]);
+                                        shells[l]=i;
+                                        i++;
+                                    }
+                                }
+                                else if(old_ver_index.empty()) {
+                                    cout<<shells<<endl;
+                                    old_ver_index.emplace_back(shells[l]);
+
+                                    shells[l] = i;
+                                    //new_ver_index.emplace_back(l);
+                                    i++;
+                                }
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
+    json new_vertices;
+    for(auto old_v:old_ver_index) {
+        new_vertices.emplace_back(vertices_list[old_v]);
+        //<<new_vertices<<endl;
+        //new_vertices.emplace_back(vertices_list[old_v]);
+    }
+
+    output_json["metadata"] = j["metadata"];
+    output_json["transform"] = j["transform"];
+    output_json["type"] = j["type"];
+    output_json["version"] = j["version"];
+    output_json["vertices"] = new_vertices;
+
+
+    ofstream o("../data/"+ building_num +".json");
+    o << output_json.dump(2) << endl;
+    o.close();
+    cout<<"finished!"<<endl;
+}
 
 
 // to select surfaces
@@ -115,54 +255,12 @@ void visit_roofsurfaces(json &j) {
 }
 
 
-void select_single_building(string &filename, string &building_num)
-{
-    std::ifstream input("../data/"+filename);
-    json j;
-    input >> j;
-    input.close();
-
-    json output_json;
-    json children_json;
-
-    for(auto &co:j["CityObjects"].items()) {
-        if(co.key() == building_num)
-        {
-            // information of parents building
-            output_json["CityObjects"][building_num] = co.value();
-            // cout<<output_json<<endl;
-            children_json = co.value()["children"];
-        }
-    }
-
-    for(auto &children:children_json){
-        for(auto &co:j["CityObjects"].items()) {
-            if(co.key() == children)
-            {
-                string name = children;
-                json new_j = co.value();
-                output_json["CityObjects"][name] = new_j;
-            }
-        }
-    }
-
-    output_json["metadata"] = j["metadata"];
-    output_json["transform"] = j["transform"];
-    output_json["type"] = j["type"];
-    output_json["version"] = j["version"];
-    output_json["vertices"] = j["vertices"];
-
-
-    ofstream o("../data/"+ building_num +".json");
-    o << output_json.dump(2) << endl;
-    o.close();
-}
 
 
 int main(int argc, const char * argv[]) {
 
-    string filename = "cityjson_copy.json";
-    string building_num = "NL.IMBAG.Pand.0503100000013040";
+    string filename = "3dbag_v210908_fd2cee53_5910.json";
+    string building_num = "NL.IMBAG.Pand.0503100000032914";
 
     select_single_building(filename,building_num);
 
