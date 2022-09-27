@@ -875,27 +875,6 @@ void exportCityJSON(DCEL& D, const char* file_out) {
 //std::cout << "total holes: " << num_hole << std::endl;
 }
 
-// function to process window corners
-//output: a vector<vector<double*>>, the order of corner point is:
-//top-left, bottom-left, bottom-right, top-right, in CCW.
-vector<Point> window_processing(string &filename){
-    string line;
-    ifstream in;
-    in.open(filename);
-    vector<Point> vertices;
-    while (getline(in, line))                           // read whole line
-    {
-        std::istringstream iss(line);
-        std::string word;
-
-        vector<float> coordinates;
-        while (iss >> word)
-            coordinates.push_back(std::stof(word));
-        if (coordinates.size() == 3) vertices.emplace_back(coordinates[0], coordinates[1], coordinates[2]);
-        else vertices.emplace_back();
-    }
-    return vertices;
-}
 
 float distance(Point &pt1, Point &pt2)
 {
@@ -903,16 +882,9 @@ float distance(Point &pt1, Point &pt2)
     return dis;
 }
 
-
 //
-int nearest_surface(string &building_file,Point &camera) {
+int nearest_surface(json &j, Point &camera) {
     // find out windows
-
-    //visit all wallsurface
-    ifstream input(building_file);
-    json j;
-    input >> j;
-    input.close();
 
     vector<Point> centre;
     for (auto& co : j["CityObjects"].items()) {
@@ -922,7 +894,8 @@ int nearest_surface(string &building_file,Point &camera) {
                 for (auto& shell : g["boundaries"]) {
                     Point pt(0.0,0.0,0.0);
                     int count=0;
-                    for (auto& surface : shell) {
+                    for(auto& surface: shell)
+                    {
                         for (auto& ring : surface) {
                             for (auto& v : ring) {
                                 std::vector<int> vi = j["vertices"][v.get<int>()];
@@ -930,12 +903,7 @@ int nearest_surface(string &building_file,Point &camera) {
                                 pt.y += vi[1];
                                 pt.z += vi[2];
                                 count = count+1;
-//                                pt.x += (vi[0] * j["transform"]["scale"][0].get<double>()) + j["transform"]["translate"][0].get<double>();
-//                                pt.y += (vi[1] * j["transform"]["scale"][1].get<double>()) + j["transform"]["translate"][1].get<double>();
-//                                pt.z += (vi[2] * j["transform"]["scale"][2].get<double>()) + j["transform"]["translate"][2].get<double>();
-                                //std::cout << std::setprecision(2) << std::fixed << v << " (" << x << ", " << y << ", " << z << ")" << std::endl;
                             }
-
                         }
                     }
                     centre.emplace_back(pt.x/count,pt.y/count,pt.z/count);
@@ -958,44 +926,82 @@ int nearest_surface(string &building_file,Point &camera) {
     return count;
 }
 
+// function to process window corners
+//output: a vector<vector<double*>>, the order of corner point is:
+//top-left, bottom-left, bottom-right, top-right, in CCW.
+vector<Point> window_processing(string &filename){
+    string line;
+    ifstream in;
+    in.open(filename);
+    vector<Point> vertices;
+    while (getline(in, line))                           // read whole line
+    {
+        std::istringstream iss(line);
+        std::string word;
+        vector<float> coordinates;
+        while (iss >> word)
+            coordinates.push_back(std::stof(word));
+        if (coordinates.size() == 3) vertices.emplace_back(coordinates[0], coordinates[1], coordinates[2]);
+        else vertices.emplace_back();
+
+    }
+    return vertices;
+}
+
+
+json add_window(string &building_file, string &window_file, Point &camera)
+{
+    ifstream input("../data/"+ building_file);
+    json j;
+    input >> j;
+    input.close();
+
+    int surface_no = nearest_surface(j,camera);
+    vector<Point> window_corner = window_processing(window_file);
+    json window_index;
+    // add to vertices list
+    int size = j["vertices"].size();
+    for(int i = 0;i < window_corner.size(); i++)
+    {
+        json vertex = {window_corner[i].x,window_corner[i].y,window_corner[i].z};
+        cout<<vertex<<endl;
+        //j["vertices"].emplace_back(vertex);
+        j["vertices"][size+i]={window_corner[i].x,window_corner[i].y,window_corner[i].z};
+        cout<<j["vertices"][size+i]<<endl;
+        window_index[i]=size+i;
+    }
+    cout<<window_index<<endl;
+
+    for (auto& co : j["CityObjects"].items()) {
+        std::cout << "= CityObject: " << co.key() << std::endl;
+        for (auto& g : co.value()["geometry"]) {
+            if (g["type"] == "MultiSurface") {
+                json tmp = {window_index};
+                g["boundaries"].emplace_back(tmp);
+            }
+        }
+    }
+    return j;
+}
+
+
 int main(int argc, const char * argv[]) {
 
     string filename = "..//data//success.json";
     string window_file = "..//data//windows.txt";
 
     Point camera(85200.79,446745.28,1);
-    nearest_surface(filename,camera);
 
     ifstream input("../data/"+filename);
     json j;
     input >> j;
     input.close();
 
+    json new_j = add_window(filename,window_file,camera);
+    ofstream output("..//data//output.json");
+    output<<new_j<<endl;
+    output.close();
 
-//    clock_t start, end;
-//    start = clock();
-//    const char *file_in = "..//data//NL.IMBAG.Pand.0503100000018507_lod22_tri.obj";
-//    const char *file_out = "..//data//result.json";
-//
-//    // create an empty DCEL
-//    DCEL D;
-//    // 1. read the triangle soup from the OBJ input file and convert it to the DCEL,
-//    importOBJ(D, file_in);
-//    // 2. group the triangles into meshes,
-//    groupTriangles(D);
-//    // 3. determine the correct orientation for each mesh and ensure all its triangles
-//    //    are consistent with this correct orientation (ie. all the triangle normals
-//    //    are pointing outwards).
-//    orientMeshes(D);
-//
-//    // 4. merge adjacent triangles that are co-planar into larger polygonal faces.
-//    mergeCoPlanarFaces(D);
-//    // 5. write the meshes with their faces to a valid CityJSON output file.
-//    exportCityJSON(D, file_out);
-//
-//    end = clock();
-//    std::cout << "Time " << double(end - start) / CLOCKS_PER_SEC << "s" << std::endl;
-//
-//
+
     return 0;
 }
