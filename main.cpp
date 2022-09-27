@@ -15,16 +15,6 @@
 using namespace std;
 using json = nlohmann::json;
 
-//class Point{
-//public:
-//    double x;
-//    double y;
-//    double z;
-//
-//    Point(double x1,double y1,double z1): x(x1),y(y1),z(z1)
-//    {}
-//};
-
 void select_single_building(string &filename, string &building_num)
 {
     std::ifstream input("../data/"+filename);
@@ -169,6 +159,7 @@ json lod_filter(json &j,float lod) {
 }
 // to select surfaces
 // in this case, the surface is
+
 static void read_surface_list(json &j, int surface_id)
 {
     for(auto &co:j["CityObjects"].items()) {
@@ -181,7 +172,6 @@ static void read_surface_list(json &j, int surface_id)
         }
     }
 }
-
 
 void split_surface(json &j ){
 
@@ -243,7 +233,6 @@ void list_all_vertices(json& j) {
         }
     }
 }
-
 
 // Visit every 'RoofSurface' in the CityJSON model and output its geometry (the arrays of indices)
 // Useful to learn to visit the geometry boundaries and at the same time check their semantics.
@@ -886,45 +875,127 @@ void exportCityJSON(DCEL& D, const char* file_out) {
 //std::cout << "total holes: " << num_hole << std::endl;
 }
 
+// function to process window corners
+//output: a vector<vector<double*>>, the order of corner point is:
+//top-left, bottom-left, bottom-right, top-right, in CCW.
+vector<Point> window_processing(string &filename){
+    string line;
+    ifstream in;
+    in.open(filename);
+    vector<Point> vertices;
+    while (getline(in, line))                           // read whole line
+    {
+        std::istringstream iss(line);
+        std::string word;
+
+        vector<float> coordinates;
+        while (iss >> word)
+            coordinates.push_back(std::stof(word));
+        if (coordinates.size() == 3) vertices.emplace_back(coordinates[0], coordinates[1], coordinates[2]);
+        else vertices.emplace_back();
+    }
+    return vertices;
+}
+
+float distance(Point &pt1, Point &pt2)
+{
+    float dis = sqrt(pow((pt1.x-pt2.x),2)+pow((pt1.y-pt2.y),2)+pow((pt1.z-pt2.z),2));
+    return dis;
+}
 
 
-int main(int argc, const char * argv[]) {
+//
+int nearest_surface(string &building_file,Point &camera) {
+    // find out windows
 
-    string filename = "3dbag_v210908_fd2cee53_5910.json";
-    string building_num = "NL.IMBAG.Pand.0503100000032914";
-
-    std::ifstream input("../data/"+filename);
+    //visit all wallsurface
+    ifstream input(building_file);
     json j;
     input >> j;
     input.close();
-    
-    lod_filter(j,2.2);
-    select_single_building(filename,building_num);
 
-    clock_t start, end;
-    start = clock();
-    const char *file_in = "..//data//NL.IMBAG.Pand.0503100000018507_lod22_tri.obj";
-    const char *file_out = "..//data//result.json";
+    vector<Point> centre;
+    for (auto& co : j["CityObjects"].items()) {
+        std::cout << "= CityObject: " << co.key() << std::endl;
+        for (auto& g : co.value()["geometry"]) {
+            if (g["type"] == "MultiSurface") {
+                for (auto& shell : g["boundaries"]) {
+                    Point pt(0.0,0.0,0.0);
+                    int count=0;
+                    for (auto& surface : shell) {
+                        for (auto& ring : surface) {
+                            for (auto& v : ring) {
+                                std::vector<int> vi = j["vertices"][v.get<int>()];
+                                pt.x += vi[0];
+                                pt.y += vi[1];
+                                pt.z += vi[2];
+                                count = count+1;
+//                                pt.x += (vi[0] * j["transform"]["scale"][0].get<double>()) + j["transform"]["translate"][0].get<double>();
+//                                pt.y += (vi[1] * j["transform"]["scale"][1].get<double>()) + j["transform"]["translate"][1].get<double>();
+//                                pt.z += (vi[2] * j["transform"]["scale"][2].get<double>()) + j["transform"]["translate"][2].get<double>();
+                                //std::cout << std::setprecision(2) << std::fixed << v << " (" << x << ", " << y << ", " << z << ")" << std::endl;
+                            }
 
-    // create an empty DCEL
-    DCEL D;
-    // 1. read the triangle soup from the OBJ input file and convert it to the DCEL,
-    importOBJ(D, file_in);
-    // 2. group the triangles into meshes,
-    groupTriangles(D);
-    // 3. determine the correct orientation for each mesh and ensure all its triangles
-    //    are consistent with this correct orientation (ie. all the triangle normals
-    //    are pointing outwards).
-    orientMeshes(D);
+                        }
+                    }
+                    centre.emplace_back(pt.x/count,pt.y/count,pt.z/count);
+                }
+            }
+        }
+    }
+    int count=0;
+    float nearest_distance= distance(camera,centre[0]);
+    for(int i=0;i<centre.size();i++) {
+        float current_dis = distance(camera,centre[i]);
+        cout<<current_dis<<endl;
+        if(nearest_distance >= current_dis)
+        {
+            nearest_distance = current_dis;
+            count = i;
+        }
+    }
+    cout<<count<<endl;
+    return count;
+}
 
-    // 4. merge adjacent triangles that are co-planar into larger polygonal faces.
-    mergeCoPlanarFaces(D);
-    // 5. write the meshes with their faces to a valid CityJSON output file.
-    exportCityJSON(D, file_out);
+int main(int argc, const char * argv[]) {
 
-    end = clock();
-    std::cout << "Time " << double(end - start) / CLOCKS_PER_SEC << "s" << std::endl;
-    
-    
+    string filename = "..//data//success.json";
+    string window_file = "..//data//windows.txt";
+
+    Point camera(85200.79,446745.28,1);
+    nearest_surface(filename,camera);
+
+    ifstream input("../data/"+filename);
+    json j;
+    input >> j;
+    input.close();
+
+
+//    clock_t start, end;
+//    start = clock();
+//    const char *file_in = "..//data//NL.IMBAG.Pand.0503100000018507_lod22_tri.obj";
+//    const char *file_out = "..//data//result.json";
+//
+//    // create an empty DCEL
+//    DCEL D;
+//    // 1. read the triangle soup from the OBJ input file and convert it to the DCEL,
+//    importOBJ(D, file_in);
+//    // 2. group the triangles into meshes,
+//    groupTriangles(D);
+//    // 3. determine the correct orientation for each mesh and ensure all its triangles
+//    //    are consistent with this correct orientation (ie. all the triangle normals
+//    //    are pointing outwards).
+//    orientMeshes(D);
+//
+//    // 4. merge adjacent triangles that are co-planar into larger polygonal faces.
+//    mergeCoPlanarFaces(D);
+//    // 5. write the meshes with their faces to a valid CityJSON output file.
+//    exportCityJSON(D, file_out);
+//
+//    end = clock();
+//    std::cout << "Time " << double(end - start) / CLOCKS_PER_SEC << "s" << std::endl;
+//
+//
     return 0;
 }

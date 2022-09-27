@@ -153,7 +153,7 @@ struct Face : DCELElement {
   int flip = 0;
   
   Face(){};
-  Face(const Face&) = delete;
+  Face(const Face&) = default;
 
   bool hasDanglingLink() const override;
   
