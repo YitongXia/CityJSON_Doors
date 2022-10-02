@@ -929,58 +929,78 @@ int nearest_surface(json &j, Point &camera) {
 // function to process window corners
 //output: a vector<vector<double*>>, the order of corner point is:
 //top-left, bottom-left, bottom-right, top-right, in CCW.
-vector<Point> window_processing(string &filename){
+vector<vector<Point>> window_processing(string &filename){
     string line;
     ifstream in;
     in.open(filename);
     vector<Point> vertices;
-    while (getline(in, line))                           // read whole line
+    vector<vector<Point>> window_list;
+    if(in.is_open())
     {
-        std::istringstream iss(line);
-        std::string word;
-        vector<float> coordinates;
-        while (iss >> word)
-            coordinates.push_back(std::stof(word));
-        if (coordinates.size() == 3) vertices.emplace_back(coordinates[0], coordinates[1], coordinates[2]);
-        else vertices.emplace_back();
-
+        std::string line;
+        while (getline(in, line)) {
+            std::istringstream iss(line);
+            std::string word;
+            iss >> word;
+            vector<float> coordinates;
+            if (word == "window" || word == "door") {
+                if(vertices.empty()) continue;
+                else{
+                    window_list.emplace_back(vertices);
+                    vertices.clear();
+                }
+            }
+            else {
+                coordinates.push_back(std::stof(word));
+                while (iss >> word)
+                    coordinates.push_back(std::stof(word));
+                if (coordinates.size() == 3) vertices.emplace_back(coordinates[0], coordinates[1], coordinates[2]);
+                else vertices.emplace_back();
+            }
+        }
     }
-    return vertices;
+    if(!vertices.empty())
+        window_list.emplace_back(vertices);
+    return window_list;
 }
 
-
-json add_window(string &building_file, string &window_file, Point &camera)
+json add_multi_window(string &building_file, string &window_file, Point &camera)
 {
     ifstream input("../data/"+ building_file);
     json j;
     input >> j;
     input.close();
 
-    int surface_no = nearest_surface(j,camera);
-    vector<Point> window_corner = window_processing(window_file);
-    json window_index;
-    // add to vertices list
-    int size = j["vertices"].size();
-    for(int i = 0;i < window_corner.size(); i++)
-    {
-        json vertex = {window_corner[i].x,window_corner[i].y,window_corner[i].z};
-        cout<<vertex<<endl;
-        //j["vertices"].emplace_back(vertex);
-        j["vertices"][size+i]={window_corner[i].x,window_corner[i].y,window_corner[i].z};
-        cout<<j["vertices"][size+i]<<endl;
-        window_index[i]=size+i;
-    }
-    cout<<window_index<<endl;
+//    int surface_no = nearest_surface(j,camera);
+    vector<vector<Point>> objects_corner = window_processing(window_file);
 
-    for (auto& co : j["CityObjects"].items()) {
-        std::cout << "= CityObject: " << co.key() << std::endl;
-        for (auto& g : co.value()["geometry"]) {
-            if (g["type"] == "MultiSurface") {
-                json tmp = {window_index};
-                g["boundaries"].emplace_back(tmp);
+    // add to vertices list
+
+    for(auto &window_corner:objects_corner)
+    {
+        json window_index;
+        int size = j["vertices"].size();
+        for(int i = 0;i < window_corner.size(); i++)
+        {
+            json vertex = {window_corner[i].x,window_corner[i].y,window_corner[i].z};
+            cout<<vertex<<endl;
+            //j["vertices"].emplace_back(vertex);
+            j["vertices"][size+i]={window_corner[i].x,window_corner[i].y,window_corner[i].z};
+            cout<<j["vertices"][size+i]<<endl;
+            window_index[i]=size+i;
+        }
+
+        for (auto& co : j["CityObjects"].items()) {
+            std::cout << "= CityObject: " << co.key() << std::endl;
+            for (auto& g : co.value()["geometry"]) {
+                if (g["type"] == "MultiSurface") {
+                    json tmp = {window_index};
+                    g["boundaries"].emplace_back(tmp);
+                }
             }
         }
     }
+
     return j;
 }
 
@@ -997,8 +1017,8 @@ int main(int argc, const char * argv[]) {
     input >> j;
     input.close();
 
-    json new_j = add_window(filename,window_file,camera);
-    ofstream output("..//data//output.json");
+    json new_j = add_multi_window(filename,window_file,camera);
+    ofstream output("..//data//test.json");
     output<<new_j<<endl;
     output.close();
 
